@@ -23,4 +23,5 @@ Opciones de juego:
 Puedes reiniciar el juego en cualquier momento haciendo clic en la cara sonriente ("🙂") en la esquina superior derecha del tablero.
 Dificultades:
 
-El juego ofrece diferentes niveles de dificultad: Principiante, Intermedio, Experto y Personalizado, que varían en tamaño de tablero y número de minas.
+El juego ofrece diferentes niveles de dificultad: Principiante, Intermedio, Experto y Personalizado, que varían en tamaño de tablero y número de minas. 
+![image](https://github.com/Dahakablue/BuscaMinaspro/assets/72954658/aec667dc-c139-4f2d-b6dd-46798a943c0d)
