@@ -1,0 +1,227 @@
+<html>
+<head>
+<title>Buscaminas Web</title>
+<style type="text/css">
+.minetbl { border: solid #008800 2px;
+  cursor: crosshair;
+ }
+
+body {
+  background-color: #000000;
+  color: #aaFFaa;
+  }
+
+input {
+  background-color: #330033;
+  color: #aaFFaa;
+  border: solid #00FF00 1px;
+  text-align: center;
+  }
+
+select {
+  background-color: #330033;
+  color: #aaFFaa;
+  border: solid #00FF00 1px;
+  text-align: center;
+  }
+
+#headingBox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  width: auto;
+  overflow: visible;
+  }
+H1, H2 { margin: 0px; padding: 0px; }
+
+#face {
+  border: none;
+  text-decoration:none;
+  color: #FFFF00;
+  font-size: 52px;
+  }
+#modeBox {
+  position: absolute;
+  border: solid green 1px;
+  top: 0px;
+  right: 0px;
+  z-index: 101;
+  padding-top: 8px;
+  padding-right: 8px;
+  padding-left: 8px;
+  padding-bottom: 0px;
+  }
+
+#modeBoxHandle {
+  border: solid green 1px;
+  text-align: center;
+  -moz-border-radius: 10 10 0 0;
+  }
+
+#modeBoxHandleText {
+  color: #44ff44;
+  text-decoration: none;
+  }
+.minecell {
+  height: 2EM;
+  width: 2EM;
+  text-align:center;
+  font-size: 1.5EM;
+  vertical-align: center;
+  }
+</style>
+<script>
+var i,j,count; // Variables contadoras
+var firstMove = 1; // Bandera para indicar si se ha hecho el primer movimiento
+// Crear el tablero
+
+var boardRows = 9;   // Estas tres variables representan el tamaño del tablero,
+var boardCols = 9;   // y el número de minas encontradas en él - una vez que se usa la función de creación automática
+var boardMines = 10; // (y múltiples niveles de dificultad), determinarán cómo se construye el tablero.
+
+var board = new Array(boardRows);
+var flags = new Array(boardRows);
+var clockFlag = "nada corriendo";
+var clockAt = 0;
+var minesLeft = boardMines; // el recuento dinámico
+var tilesLeft = boardRows*boardCols - minesLeft;
+var totalClicks = 0; // Seguimiento de cuántos clics se han utilizado hasta ahora (tanto derecho como izquierdo)
+var totalSquares = 0; // Seguimiento de cuántos cuadros se han abierto
+var hitBlankOrMine = 0; // Para rastrear cuántos cuadros "número" se tocan antes de que se abra el primer área "blanca" o se toque una mina.
+
+var tiles = new Array(); // Conjunto de fuentes predeterminado: Soporte completo de emoji
+tiles[0]= "&nbsp;"; // Espacio en blanco
+tiles[1]= "<span style='color:#0000FF'>1</span>";
+tiles[2]= "<span style='color:#00FF00'>2</span>";
+tiles[3]= "<span style='color:#FF0000'>3</span>";
+tiles[4]= "<span style='color:#000088'>4</span>";
+tiles[5]= "<span style='color:#008800'>5</span>";
+tiles[6]= "<span style='color:#880000'>6</span>";
+tiles[7]= "<span style='color:#008888'>7</span>";
+tiles[8]= "<span style='color:#888800'>8</span>";
+tiles[9]= "<span style='color:#008800'>	&#9971;</span>"; // Bandera plantada
+tiles[10]= "<span style='color:#FFFF00'>&#128165;</span>"; // Mina explotada
+tiles[11]= "<span style='color:#FF0000'>&#128711;</span>"; // Bandera falsa
+tiles[12]= "<span style='color:#000000'>&#128163;</span>"; // Mina no explotada
+tiles[13]= "<span style='color:#00FF00'>?</span>"; // Marca desconocida
+tiles[14]= "&#128578;"; // Cara feliz
+tiles[15]= "&#128534;"; // Cara muerta
+tiles[16]= "&#128526;"; // Cara de victoria
+
+
+function setMode(mode) {
+  switch(mode) {
+    case "Principiante":
+      boardRows = 9;
+      boardCols = 9;
+      boardMines = 10;
+      break;
+    case "Intermedio":
+      boardRows = 16;
+      boardCols = 16;
+      boardMines = 40;
+      break;
+    case "Experto":
+      boardRows = 16;
+      boardCols = 30;
+      boardMines = 99;
+      break;
+    case "Personalizado":
+      boardRows =  parseInt(document.forms.modes.nRows.value);
+      boardCols =  parseInt(document.forms.modes.nCols.value);
+      boardMines = parseInt(document.forms.modes.nMines.value);
+    default:
+    };
+  document.getElementById("modeTitle").innerHTML = mode + " Modo";
+  document.forms.modes.nRows.value = boardRows;
+  document.forms.modes.nCols.value = boardCols;
+  document.forms.modes.nMines.value = boardMines;
+  resetBoard();
+  };
+
+
+
+function updateMines(incr) {
+  var mineStr = "Minas:<br />";
+  minesLeft += incr;
+  mineStr += minesLeft;
+  document.getElementById("mineCount").innerHTML = mineStr;
+  };
+
+function updateClock() {
+  var clockStr = "Tiempo:<br />";
+  clockAt += 1;
+  if (clockAt < 10) {
+    clockStr += "0";
+    };
+  if (clockAt < 100) {
+    clockStr += "0";
+    };
+  clockStr += clockAt;
+  document.getElementById("timeCount").innerHTML = clockStr;
+  };
+
+
+
+function rebuildBoard() {
+  var cR,cC;
+  var tableStr = "<table class=\"minetbl\" cellspacing=\"0\" cellpadding=\"0\">\n";
+  for (cR=0;cR<boardRows;cR++) {
+    tableStr += "<tr>\n";
+    for (cC=0;cC<boardCols;cC++) {
+      tableStr += "<td class=\"minecell\" id=\"c"+cR+":"+cC+"\" style=\"border: outset #aaaaaa 0.1EM; background-color: #888888;\" onclick=\"lClick('"+cR+":"+cC+"')\" oncontextmenu=\"return rClick('"+cR+":"+cC+"')\">&nbsp;</td>\n";
+      };
+    tableStr += "</tr>";
+    };
+  tableStr += "</table>\n";
+  document.getElementById("theTable").innerHTML = tableStr;
+  };
+
+
+
+function resetBoard() {
+  // Resetear todo: arrays de banderas y tablero, minas, imágenes y propiedades de estilo de celdas.
+  document.getElementById("face").innerHTML = tiles[14];
+  rebuildBoard();
+  if (clockFlag != "nada corriendo") { // Detener el reloj si es necesario.
+    clearInterval(clockFlag);
+    };
+  clockAt = -1; // Ahora restablecer el reloj para mostrar 000
+  updateClock();
+  minesLeft = boardMines;
+  totalClicks = 0;
+  totalSquares = 0;
+  hitBlankOrMine = 0;
+  updateMines(0);
+  firstMove = 1;
+  for (i=0;i<boardRows;i++) {
+    board[i] = new Array(boardCols);
+    flags[i] = new Array(boardCols);
+    for (j=0;j<boardCols;j++) {
+      board[i][j]=" ";
+      flags[i][j]=" ";
+      document.getElementById("c"+i+":"+j).innerHTML="&nbsp;";
+      document.getElementById("c"+i+":"+j).style.backgroundColor="#888888";
+      document.getElementById("c"+i+":"+j).style.borderStyle="outset";
+      };
+    };
+  // Colocar las minas ahora
+  for (count=0;count<minesLeft;count++) {
+    i = Math.round(Math.random()*(boardRows - 1));
+    j = Math.round(Math.random()*(boardCols - 1));
+    while (board[i][j] == "M") {
+      // números mal escogidos, escoger nuevos.
+      i = Math.round(Math.random()*(boardRows - 1));
+      j = Math.round(Math.random()*(boardCols - 1));
+      };
+    board[i][j] = "M";
+    };
+  tilesLeft = boardRows*boardCols - minesLeft;
+  return false;
+  };
+
+
+function lClick(whichOne) {
+  // La mayor parte del juego ocurre aquí.
+  var row,col;
